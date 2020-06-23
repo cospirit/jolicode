@@ -5,6 +5,7 @@ volumes:
     postgres-data: {}
     redis-data: {}
     redis-insight-data: {}
+    elasticsearch-data: {}
 
 services:
     rabbitmq:
@@ -59,3 +60,35 @@ services:
             - POSTGRES_PASSWORD=app
         volumes:
             - postgres-data:/var/lib/postgresql/data
+
+    elasticsearch:
+        image: elasticsearch:7.3.2
+        volumes:
+            - elasticsearch-data:/usr/share/elasticsearch/data
+        environment:
+            - "ES_JAVA_OPTS=-Xms128m -Xmx128m"
+            - "discovery.type=single-node"
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.${PROJECT_NAME}-elasticsearch.rule=Host(`elasticsearch.${PROJECT_ROOT_DOMAIN}`)"
+            - "traefik.http.routers.${PROJECT_NAME}-elasticsearch.tls=true"
+
+    kibana:
+        image: kibana:7.3.2
+        depends_on:
+            - elasticsearch
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.${PROJECT_NAME}-kibana.rule=Host(`kibana.${PROJECT_ROOT_DOMAIN}`)"
+            - "traefik.http.routers.${PROJECT_NAME}-kibana.tls=true"
+
+    mercure:
+        image: dunglas/mercure
+        environment:
+            - "JWT_KEY=password"
+            - "ALLOW_ANONYMOUS=1"
+            - "CORS_ALLOWED_ORIGINS=*"
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.${PROJECT_NAME}-mercure.rule=Host(`mercure.${PROJECT_ROOT_DOMAIN}`)"
+            - "traefik.http.routers.${PROJECT_NAME}-mercure.tls=true"
